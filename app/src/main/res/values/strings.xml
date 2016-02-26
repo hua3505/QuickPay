@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">QuickPay</string>
+    <string name="xposed_description">To launch pay activity directory when screen is off.</string>
+    <string name="welcome">Hello, welcome to QuickPay!</string>
+</resources>

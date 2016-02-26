@@ -1,0 +1,30 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.gmail.huashadow.quickpay">
+
+    <application android:allowBackup="true"
+         android:label="@string/app_name"
+         android:icon="@mipmap/ic_launcher"
+         android:supportsRtl="true"
+         android:theme="@style/AppTheme">
+
+        <activity android:name=".MainActivity">
+            <intent-filter>
+                <action android:name="ANDROID.INTENT.ACTION.MAIN"/>
+                <category android:name="ANDROID.INTENT.CATEGORY.DEFAULT"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <meta-data
+            android:name="xposedmodule"
+            android:value="true" />
+        <meta-data
+            android:name="xposeddescription"
+            android:value="@string/xposed_description" />
+        <meta-data
+            android:name="xposedminversion"
+            android:value="30" />
+
+    </application>
+
+</manifest>
