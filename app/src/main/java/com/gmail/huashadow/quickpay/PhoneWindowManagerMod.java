@@ -1,14 +1,19 @@
 package com.gmail.huashadow.quickpay;
 
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
+import android.os.UserHandle;
 import android.util.Log;
 import android.view.KeyEvent;
 
 import com.gmail.huashadow.quickpay.utils.ReflectTools;
 
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 
 import de.robv.android.xposed.IXposedHookZygoteInit;
 import de.robv.android.xposed.XC_MethodHook;
@@ -22,6 +27,10 @@ import de.robv.android.xposed.XposedHelpers;
 public class PhoneWindowManagerMod implements IXposedHookZygoteInit {
     private static final String TAG = Constants.APP_TAG + "." + PhoneWindowManagerMod.class.getSimpleName();
 
+    private Context mContext;
+    private UserHandle mUserHandle;
+    private Map<String, Method> mMethods = new HashMap<>();
+
     @Override
     public void initZygote(StartupParam startupParam) throws Throwable {
         Log.d(TAG, "initZygote");
@@ -33,12 +42,45 @@ public class PhoneWindowManagerMod implements IXposedHookZygoteInit {
         try {
             Class<?> clazz = XposedHelpers.findClass(phoneWindowManagerClassName, null);
             if (clazz != null) {
+                hookInit(clazz);
                 hookInterceptKeyBeforeDispatching(clazz);
             } else {
                 Log.w(TAG, "PhoneWindowManager not found");
             }
         } catch (XposedHelpers.ClassNotFoundError e) {
             Log.e(TAG, "PhoneWindowManager class not found", e);
+        }
+    }
+
+    private void hookInit(Class<?> clazz) {
+        try {
+            Method m = ReflectTools.findMethodWithoutOverLoaded(clazz, "init");
+            XposedBridge.hookMethod(m, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    init(param);
+                }
+            });
+        } catch (NoSuchMethodException e) {
+            Log.e(TAG, "hookInit", e);
+        } catch (ReflectTools.HasOverLoadedMethodException e) {
+            Log.e(TAG, "hookInit", e);
+        }
+    }
+
+    private void init(XC_MethodHook.MethodHookParam param) {
+        mContext = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
+        try {
+            Method methodStartActivityAsUser = XposedHelpers.findMethodExact(mContext.getClass(),
+                    "startActivityAsUser", Intent.class, UserHandle.class);
+            mMethods.put("startActivityAsUser", methodStartActivityAsUser);
+            mUserHandle = (UserHandle) XposedHelpers.getStaticObjectField(UserHandle.class, "CURRENT");
+        } catch (XposedHelpers.ClassNotFoundError e) {
+            Log.e(TAG, "init", e);
+        } catch (NoSuchMethodError e) {
+            Log.e(TAG, "init", e);
+        } catch (Throwable tr) {
+            Log.e(TAG, "init", tr);
         }
     }
 
@@ -59,8 +101,8 @@ public class PhoneWindowManagerMod implements IXposedHookZygoteInit {
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         KeyEvent keyEvent = (KeyEvent) param.args[1];
                         Log.v(TAG, "hookInterceptKeyBeforeDispatching: " + keyEvent.toString());
-                        Context context = (Context) XposedHelpers.getAdditionalInstanceField(param.thisObject, "mContext");
-                        handleKeyEvent(context, keyEvent);
+
+                        handleKeyEvent(keyEvent);
 
                     }
                 });
@@ -69,27 +111,25 @@ public class PhoneWindowManagerMod implements IXposedHookZygoteInit {
                 Log.w(TAG, "method interceptKeyBeforeDispatching not found");
             }
         } catch (NoSuchMethodError e) {
-            Log.e(TAG, "", e);
+            Log.e(TAG, "hookInterceptKeyBeforeDispatching", e);
         } catch (IllegalArgumentException e) {
-            Log.e(TAG, "", e);
+            Log.e(TAG, "hookInterceptKeyBeforeDispatching", e);
         } catch (Exception e) {
-            Log.e(TAG, "", e);
+            Log.e(TAG, "hookInterceptKeyBeforeDispatching", e);
         }
     }
 
 
-    private void handleKeyEvent(Context context, KeyEvent keyEvent) {
+    private void handleKeyEvent(KeyEvent keyEvent) {
         if (keyEvent.getKeyCode() == KeyEvent.KEYCODE_VOLUME_DOWN) {
             if (keyEvent.getAction() == KeyEvent.ACTION_UP) {
-                Log.d(TAG, "handleKeyEvent key VOLUME_DOWN aciton ACTION_UP");
+                Log.v(TAG, "handleKeyEvent key VOLUME_DOWN aciton ACTION_UP");
                 try {
-                    Log.d(TAG, "handleKeyEvent start MainActivity -2");
-                    Intent intent = new Intent(context, MainActivity.class);
-                    Log.d(TAG, "handleKeyEvent start MainActivity -1");
-                    context.startActivity(intent);
-                    Log.d(TAG, "handleKeyEvent start MainActivity");
+                    Intent intent = new Intent(Constants.ACTION_START_MAIN_ACTIVITY);
+                    Method method = mMethods.get("startActivityAsUser");
+                    method.invoke(mContext, intent, mUserHandle);
                 } catch (Throwable tr) {
-                    Log.e(TAG, "", tr);
+                    Log.e(TAG, "handleKeyEvent", tr);
                 }
             }
         }

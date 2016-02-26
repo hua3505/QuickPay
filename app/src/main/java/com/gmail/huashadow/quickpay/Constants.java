@@ -5,4 +5,5 @@ package com.gmail.huashadow.quickpay;
  */
 public class Constants {
     public static final String APP_TAG = "QuickPay";
+    public static final String ACTION_START_MAIN_ACTIVITY = "QuickPay.START_MAIN_ACTIVITY";
 }
