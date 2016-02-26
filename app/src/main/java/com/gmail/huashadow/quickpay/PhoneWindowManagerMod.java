@@ -1,10 +1,12 @@
 package com.gmail.huashadow.quickpay;
 
+import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
 import android.os.UserHandle;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -119,12 +121,13 @@ public class PhoneWindowManagerMod implements IXposedHookZygoteInit {
         }
     }
 
-
     private void handleKeyEvent(KeyEvent keyEvent) {
         if (keyEvent.getKeyCode() == KeyEvent.KEYCODE_VOLUME_DOWN) {
             if (keyEvent.getAction() == KeyEvent.ACTION_UP) {
                 Log.v(TAG, "handleKeyEvent key VOLUME_DOWN aciton ACTION_UP");
                 try {
+                    wakeUp();
+                    unlock();
                     Intent intent = new Intent(Constants.ACTION_START_MAIN_ACTIVITY);
                     Method method = mMethods.get("startActivityAsUser");
                     method.invoke(mContext, intent, mUserHandle);
@@ -133,5 +136,19 @@ public class PhoneWindowManagerMod implements IXposedHookZygoteInit {
                 }
             }
         }
+    }
+
+    private void wakeUp() {
+        PowerManager powerManager =(PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
+        PowerManager.WakeLock wl = powerManager.newWakeLock(
+                PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.SCREEN_DIM_WAKE_LOCK, "bright");
+        wl.acquire();
+        wl.release();
+    }
+
+    private void unlock() {
+        KeyguardManager km = (KeyguardManager) mContext.getSystemService(Context.KEYGUARD_SERVICE);
+        KeyguardManager.KeyguardLock kl = km.newKeyguardLock("unLock");
+        kl.disableKeyguard();
     }
 }
