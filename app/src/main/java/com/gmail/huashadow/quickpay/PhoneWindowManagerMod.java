@@ -126,8 +126,8 @@ public class PhoneWindowManagerMod implements IXposedHookZygoteInit {
             if (keyEvent.getAction() == KeyEvent.ACTION_UP) {
                 Log.v(TAG, "handleKeyEvent key VOLUME_DOWN aciton ACTION_UP");
                 try {
-                    wakeUp();
-                    unlock();
+                    //wakeUp();
+                    //unlock();
                     Intent intent = new Intent(Constants.ACTION_START_MAIN_ACTIVITY);
                     Method method = mMethods.get("startActivityAsUser");
                     method.invoke(mContext, intent, mUserHandle);
